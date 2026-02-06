@@ -1,0 +1,31 @@
+{
+	"config": {
+		"platform-check": false,
+		"allow-plugins": {
+			"kylekatarnls/update-helper": false
+		}
+	},
+	"require": {
+		"nesbot/carbon": "^2.72.3",
+		"firebase/php-jwt": "^5.4",
+		"google/apiclient": "^2.12.3"
+		
+	},
+	"autoload": {
+		"classmap": [
+			"inc/"
+		],
+		"exclude-from-classmap": [
+			"inc/bootstrap.php"
+		]
+	},
+	"scripts": {
+        "pre-autoload-dump": "Google\\Task\\Composer::cleanup"
+    },
+	"extra": {
+        "google/apiclient-services": [
+            "Drive",
+			"Sheets"
+        ]
+    }
+}

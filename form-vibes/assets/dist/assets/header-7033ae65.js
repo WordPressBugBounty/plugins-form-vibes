@@ -1,0 +1,2 @@
+import{o as i,g as r,k as s,l as e,t as o}from"./post-2433f428.js";const l={class:"fv-admin-bar"},c=["innerHTML"],_={class:"fv-plugin-name"},d={class:"fv-version"},h={__name:"header",setup(v){const{title:n="Form Vibes",version:a="",logo:t=""}=window.fvGlobalVar;return(f,m)=>(i(),r("div",l,[s("div",{class:"fv-logo",innerHTML:e(t)},null,8,c),s("h2",_,o(e(n)),1),s("div",d,o(e(a)),1)]))}};export{h as _};
+//# sourceMappingURL=header-7033ae65.js.map
