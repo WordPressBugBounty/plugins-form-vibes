@@ -4,7 +4,7 @@ Tags: elementor form db, contact form 7 db, contact form db, contact form 7, ele
 Requires at least: 5.0
 Requires PHP: 8.0
 Tested up to: 6.9
-Stable tag: 1.5
+Stable tag: 1.5.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -113,7 +113,13 @@ Yes, it's pretty simple; just click on the Quick Export option on the Form Vibes
 5. **Export submission into a CSV file**
 
 == Changelog ==
-= 1.5.1 =
+= 1.5.2 =
+* Added: Everest Form Integration
+* Improved: WS Forms submission stored even after action disabled from form.
+* Improved: Dashboard widget chart step size optimization for large data.
+* Improved: Analytics chart step size optimization for large data.
+
+= 1.5.1 = 
 * Fixed: Update Issue.
 
 = 1.5 = 

@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => NULL,
+        'pretty_version' => 'dev-1.5.1-Everest-Form-Integration',
+        'version' => 'dev-1.5.1-Everest-Form-Integration',
+        'reference' => '5fa39bc8638b9ebe9405522ac484f0a0cf7c68ca',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => NULL,
+            'pretty_version' => 'dev-1.5.1-Everest-Form-Integration',
+            'version' => 'dev-1.5.1-Everest-Form-Integration',
+            'reference' => '5fa39bc8638b9ebe9405522ac484f0a0cf7c68ca',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

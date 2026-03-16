@@ -71,7 +71,7 @@ class WsForm extends Base {
 
 		add_filter( 'fv_forms', [ $this, 'register_plugin' ] );
 		// calls after wp forms submit the form.
-		add_action( 'wsf_submit_create', [ $this, 'ws_form_insert' ], 10, 4 );
+		add_action( 'wsf_submit_post_complete', [ $this, 'ws_form_insert' ], 10, 4 );
 		add_filter( "formvibes/submissions/{$this->plugin_name}/columns", [ $this, 'prepare_columns' ], 10, 3 );
 	}
 

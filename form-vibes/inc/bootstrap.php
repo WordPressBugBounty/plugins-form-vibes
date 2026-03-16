@@ -19,6 +19,7 @@ use FormVibes\Integrations\GravityForms;
 use FormVibes\Integrations\BeaverBuilder;
 use FormVibes\Integrations\Bricks;
 use FormVibes\Integrations\WsForm;
+use FormVibes\Integrations\Everest;
 use WP_Query;
 
 /**
@@ -149,6 +150,11 @@ if ( ! class_exists( 'FormVibes\Plugin' ) ) {
 			if ( is_plugin_active( 'ws-form/ws-form.php' ) || is_plugin_active( 'ws-form-pro/ws-form.php' )  ) {
 				new WsForm();
 			}
+
+			if(is_plugin_active( 'everest-forms/everest-forms.php' )){
+				new Everest();
+			}
+			
 			add_action('init', function(){
 				$this->load_modules();
 			});

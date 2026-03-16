@@ -327,7 +327,6 @@ class Utils {
 
 			$plugin_forms[ $f_key ] = (object) $form;
 		}
-
 		return apply_filters( 'formvibes/all_forms', $plugin_forms );
 	}
 
@@ -407,6 +406,8 @@ class Utils {
 			return 'Gravity Forms';
 		} elseif ( 'ws-form' === $key ) {
 			return 'WS Form';
+		}elseif ('everest-forms' === $key ) {
+			return 'Everest Forms';
 		}
 
 		return $key;
@@ -913,7 +914,6 @@ class Utils {
 	 * @return array
 	 */
 	public static function prepare_table_columns( $columns, $plugin_name, $form_id, $is_all_forms ) {
-
 		// check if column value contains null,false or empty.
 		$columns = array_filter(
 			$columns,
@@ -950,7 +950,6 @@ class Utils {
 		}
 
 		$cols = apply_filters( "formvibes/submissions/{$plugin_name}/columns", $cols, $columns, $form_id );
-
 		return array_values( $cols );
 	}
 

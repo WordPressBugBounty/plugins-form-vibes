@@ -266,6 +266,7 @@ class Settings {
 		try {
 			// save settings to db.
 			$is_saved = update_option( 'fvSettings', $settings, false );
+
 			if ( $is_saved ) {
 				wp_send_json(
 					[

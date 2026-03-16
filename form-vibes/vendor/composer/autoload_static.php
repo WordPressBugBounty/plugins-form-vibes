@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit51c08da506057ff8d5f3fc915175d7d2
+class ComposerStaticInitcf5d8ae2de8fa7f9f76cb1ce2afe3335
 {
     public static $files = array (
         '7b11c4dc42b3b3023073cb14e519683c' => __DIR__ . '/..' . '/ralouphie/getallheaders/src/getallheaders.php',
@@ -170,6 +170,7 @@ class ComposerStaticInit51c08da506057ff8d5f3fc915175d7d2
         'FormVibes\\Integrations\\Caldera' => __DIR__ . '/../..' . '/inc/integrations/caldera.php',
         'FormVibes\\Integrations\\Cf7' => __DIR__ . '/../..' . '/inc/integrations/cf7.php',
         'FormVibes\\Integrations\\Elementor' => __DIR__ . '/../..' . '/inc/integrations/elementor.php',
+        'FormVibes\\Integrations\\Everest' => __DIR__ . '/../..' . '/inc/integrations/everest.php',
         'FormVibes\\Integrations\\GravityForms' => __DIR__ . '/../..' . '/inc/integrations/gravity-forms.php',
         'FormVibes\\Integrations\\NinjaForms' => __DIR__ . '/../..' . '/inc/integrations/ninja.php',
         'FormVibes\\Integrations\\WpForms' => __DIR__ . '/../..' . '/inc/integrations/wp-forms.php',
@@ -194,6 +195,7 @@ class ComposerStaticInit51c08da506057ff8d5f3fc915175d7d2
         'FormVibes\\Pro\\Modules\\ExportProfiles\\Module' => __DIR__ . '/../..' . '/inc/pro/inc/modules/export-profiles/module.php',
         'FormVibes\\Pro\\Modules\\ExportProfiles\\Utils\\Utils' => __DIR__ . '/../..' . '/inc/pro/inc/modules/export-profiles/utils.php',
         'FormVibes\\Pro\\Modules\\GoogleSheets\\Module' => __DIR__ . '/../..' . '/inc/pro/inc/modules/google-sheets/module.php',
+        'FormVibes\\Pro\\Modules\\McpServer\\Module' => __DIR__ . '/../..' . '/inc/pro/inc/modules/mcp-server/module.php',
         'FormVibes\\Pro\\Modules\\Notes\\Module' => __DIR__ . '/../..' . '/inc/pro/inc/modules/notes/module.php',
         'FormVibes\\Pro\\Modules\\RoleManager\\Module' => __DIR__ . '/../..' . '/inc/pro/inc/modules/role-manager/module.php',
         'FormVibes\\Pro\\Modules\\SubmissionEdit\\Module' => __DIR__ . '/../..' . '/inc/pro/inc/modules/submission-edit/module.php',
@@ -227,9 +229,9 @@ class ComposerStaticInit51c08da506057ff8d5f3fc915175d7d2
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit51c08da506057ff8d5f3fc915175d7d2::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit51c08da506057ff8d5f3fc915175d7d2::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit51c08da506057ff8d5f3fc915175d7d2::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitcf5d8ae2de8fa7f9f76cb1ce2afe3335::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitcf5d8ae2de8fa7f9f76cb1ce2afe3335::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInitcf5d8ae2de8fa7f9f76cb1ce2afe3335::$classMap;
 
         }, null, ClassLoader::class);
     }
