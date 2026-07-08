@@ -1,0 +1,26 @@
+{
+    "name": "wpvibes/review-reminder",
+    "description": "Lightweight admin reminder for requesting WordPress.org reviews. Time and usage based triggers, snooze/dismiss state machine, namespace-prefixable for safe distribution across multiple plugins.",
+    "type": "library",
+    "license": "GPL-2.0-or-later",
+    "keywords": ["wordpress", "review", "admin-reminder", "wpvibes"],
+    "authors": [
+        {
+            "name": "WPVibes",
+            "homepage": "https://wpvibes.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "WPVibes\\ReviewReminder\\": "src/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    }
+}

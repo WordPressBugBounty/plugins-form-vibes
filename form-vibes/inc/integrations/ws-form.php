@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\Utils;
 use FormVibes\Integrations\Base;
@@ -161,18 +162,23 @@ class WsForm extends Base {
 			if ( $values['type'] === 'file' ) {
 				if ( $values['value'] ) {
 					foreach ( $values['value'] as $fileKey => $fileValue ) {
-						$filetype = strrpos( $fileValue['name'], '.' );
-						$filetype = substr( $fileValue['name'], $filetype );
+						$src_path = wp_upload_dir()['basedir'] . '/' . $fileValue['path'];
+						$check    = wp_check_filetype_and_ext( $src_path, $fileValue['name'] );
+						if ( ! $check['ext'] || ! $check['type'] ) {
+							continue;
+						}
+
+						$filetype = '.' . $check['ext'];
 						$filename = wp_rand( 1111111111, 9999999999 );
 						$time_now = time();
 
 						array_push( $uploaded_files, $fv_dirname . '/' . $time_now . '-' . $filename . $filetype );
-						copy( wp_upload_dir()['basedir'] . '/' . $fileValue['path'], $uploads_dir . '/' . $time_now . '-' . $filename . $filetype );
+						copy( $src_path, $uploads_dir . '/' . $time_now . '-' . $filename . $filetype );
 					}
 				}
 				$values['value'] = $uploaded_files;
 			}
-			$posted_data[ $key ] = is_array( $values['value'] ) ? implode( ', ', $values['value'] ) : $values['value'];
+			$posted_data[ $key ] = is_array( $values['value'] ) ? implode( ', ', array_map( 'sanitize_text_field', $values['value'] ) ) : sanitize_text_field( $values['value'] );
 		}
 
 		return $posted_data;

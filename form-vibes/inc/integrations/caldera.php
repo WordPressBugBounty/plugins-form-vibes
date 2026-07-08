@@ -1,7 +1,7 @@
 <?php
 // phpcs:disable WordPress.DateTime.RestrictedFunctions.date_date
-// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\ApiEndpoint;
 use FormVibes\Classes\DbManager;
@@ -87,7 +87,7 @@ class Caldera extends Base {
 		$query_type  = $params['query_type'];
 
 		if ( 'day' === $filter_type ) {
-			$default_data = self::getDatesFromRange( $from_date, $to_date );
+			$default_data = self::get_dates_from_range( $from_date, $to_date );
 			$filter       = '%j';
 			$label        = "MAKEDATE(DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%Y'), DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%j'))";
 		} elseif ( 'month' === $filter_type ) {
@@ -116,16 +116,18 @@ class Caldera extends Base {
 			$orderby = $filter;
 		}
 		global $wpdb;
-		$query_param .= ' Where ';
+
+		$param_where   = [];
+		$param_where[] = $wpdb->prepare( 'form_id = %s', $formid );
 		if ( $query_type !== 'All_Time' ) {
-			$query_param .= " DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%Y-%m-%d') >= '" . $from_date . "'";
-			$query_param .= " and DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%Y-%m-%d') <= '" . $to_date . "' and";
+			$param_where[] = $wpdb->prepare( "DATE_FORMAT(ADDTIME(datestamp, %s), '%%Y-%%m-%%d') >= %s", $time_zone, $from_date );
+			$param_where[] = $wpdb->prepare( "DATE_FORMAT(ADDTIME(datestamp, %s), '%%Y-%%m-%%d') <= %s", $time_zone, $to_date );
 		}
-		$query_param .= " form_id='" . $formid . "'";
+		$query_param = ' WHERE ' . implode( ' AND ', $param_where );
 		$data_query   = 'SELECT ' . $label . " as Label, CONCAT(DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '" . $filter . "'),'(',DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%y'),')') as week, count(*) as count,CONCAT(DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%y'),'-',DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '" . $orderby . "')) as ordering from {$wpdb->prefix}cf_form_entries " . $query_param . " GROUP BY DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '" . $orderby . "'),ordering ORDER BY ordering";
 		$res          = [];
 
-		$res['data'] = $wpdb->get_results( $data_query, OBJECT_K );
+		$res['data'] = $wpdb->get_results( $data_query, OBJECT_K ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
 		if ( count( (array) $res['data'] ) > 0 ) {
 			$key = array_keys( $res['data'] )[0];
@@ -195,20 +197,29 @@ class Caldera extends Base {
 			$pre_to_date   = date( 'Y-m-t', strtotime( 'last day of last month' ) );
 		}
 		global $wpdb;
-		$pre_param  = " where form_id='" . $params['formid'] . "' and DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%Y-%m-%d') >= '" . $pre_from_date . "'";
-		$pre_param .= " and DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%Y-%m-%d') <= '" . $pre_to_date . "'";
-		$qry        = "SELECT COUNT(*) FROM {$wpdb->prefix}cf_form_entries " . $pre_param;
+		$qry = $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}cf_form_entries WHERE form_id = %s AND DATE_FORMAT(ADDTIME(datestamp, %s), '%%Y-%%m-%%d') >= %s AND DATE_FORMAT(ADDTIME(datestamp, %s), '%%Y-%%m-%%d') <= %s",
+			$params['formid'],
+			$time_zone,
+			$pre_from_date,
+			$time_zone,
+			$pre_to_date
+		);
 
-		$pre_data_count = $wpdb->get_var( $qry );
+		$pre_data_count = $wpdb->get_var( $qry ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		// get all forms data count.
-		$param = '';
 		foreach ( $all_forms as $form_key => $form_value ) {
 			if ( 'Caldera' === $form_value['plugin'] || 'caldera' === $form_value['plugin'] ) {
-				$param  = " where form_id='" . $form_key . "' and DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%Y-%m-%d') >= '" . $params['fromDate'] . "'";
-				$param .= " and DATE_FORMAT(ADDTIME(datestamp,'" . $time_zone . "' ), '%Y-%m-%d') <= '" . $params['toDate'] . "'";
-				$qry    = "SELECT COUNT(*) FROM {$wpdb->prefix}cf_form_entries " . $param;
+				$qry = $wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->prefix}cf_form_entries WHERE form_id = %s AND DATE_FORMAT(ADDTIME(datestamp, %s), '%%Y-%%m-%%d') >= %s AND DATE_FORMAT(ADDTIME(datestamp, %s), '%%Y-%%m-%%d') <= %s",
+					$form_key,
+					$time_zone,
+					$params['fromDate'],
+					$time_zone,
+					$params['toDate']
+				);
 
-				$data_count = $wpdb->get_var( $qry );
+				$data_count = $wpdb->get_var( $qry ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
 				$dashboard_data['allFormsDataCount'][ $form_key ] = [
 					'plugin'   => $form_value['plugin'],
@@ -216,11 +227,14 @@ class Caldera extends Base {
 					'formName' => $form_value['formName'],
 				];
 			} else {
-				$param  = " where form_id='" . $form_key . "' and DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) >= '" . $params['fromDate'] . "'";
-				$param .= " and DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) <= '" . $params['toDate'] . "'";
-				$qry    = "SELECT COUNT(*) FROM {$wpdb->prefix}fv_enteries " . $param;
+				$qry = $wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->prefix}fv_enteries WHERE form_id = %s AND DATE_FORMAT(captured, GET_FORMAT(DATE,'JIS')) >= %s AND DATE_FORMAT(captured, GET_FORMAT(DATE,'JIS')) <= %s",
+					$form_key,
+					$params['fromDate'],
+					$params['toDate']
+				);
 
-				$data_count = $wpdb->get_var( $qry );
+				$data_count = $wpdb->get_var( $qry ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
 				$dashboard_data['allFormsDataCount'][ $form_key ] = [
 					'plugin'   => $form_value['plugin'],
@@ -253,7 +267,7 @@ class Caldera extends Base {
 	 * @access public
 	 * @return array
 	 */
-	public static function getDatesFromRange( $start, $end, $format = 'Y-m-d' ) {
+	public static function get_dates_from_range( $start, $end, $format = 'Y-m-d' ) {
 
 		$date_1 = $start;
 		$date_2 = $end;
@@ -411,7 +425,7 @@ class Caldera extends Base {
 		$data        = [];
 		foreach ( $form_result as $form ) {
 			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize
-			$form_name                = unserialize( $form->config );
+			$form_name                = unserialize( $form->config, [ 'allowed_classes' => false ] );
 			$data[ $form_name['ID'] ] = [
 				'id'   => $form_name['ID'],
 				'name' => $form_name['name'],

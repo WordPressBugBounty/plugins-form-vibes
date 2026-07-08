@@ -91,19 +91,15 @@ class DbTables {
 
 		$db_version_update = true;
 
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '{$wpdb->prefix}fv_enteries'" ) === null ) {
+		if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $wpdb->prefix . 'fv_enteries' ) ) === null ) {
 			$db_version_update = false;
 		}
-		
-		// Secure Code
-		// if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) !== $table_name ) {
-		// 	$db_version_update = false;
-		// }
 
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '{$wpdb->prefix}fv_entry_meta'" ) === null ) {
+		if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $wpdb->prefix . 'fv_entry_meta' ) ) === null ) {
 			$db_version_update = false;
 		}
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '{$wpdb->prefix}fv_logs'" ) === null ) {
+
+		if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $wpdb->prefix . 'fv_logs' ) ) === null ) {
 			$db_version_update = false;
 		}
 

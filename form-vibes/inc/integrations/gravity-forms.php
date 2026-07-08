@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\Utils;
 use FormVibes\Integrations\Base;
@@ -110,7 +111,7 @@ class GravityForms extends Base {
 		// check if user wants to store/save the entry to db.
 		$save_entry = true;
 
-		$save_entry = apply_filters( 'formvibes/ninjaforms/save_record', $save_entry, $form );
+		$save_entry = apply_filters( 'formvibes/gravityforms/save_record', $save_entry, $form );
 
 		if ( ! $save_entry ) {
 			return;

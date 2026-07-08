@@ -67,20 +67,22 @@ class Module {
 	 */
 	public function get_columns() {
 
+		$nonce = isset( $_POST['ajaxNonce'] ) ? sanitize_text_field( wp_unslash( $_POST['ajaxNonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'fv_ajax_nonce' ) ) {
+			wp_die( 'Sorry, your nonce did not verify!' );
+		}
+
 		if ( ! Permissions::check_permission( Permissions::$CAP_SUBMISSIONS ) ) {
-			die( 'Sorry, you are not allowed to do this action!' );
+			wp_die( 'Sorry, you are not allowed to do this action!' );
 		}
 
-		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
-			die( 'Sorry, your nonce did not verify!' );
-		}
-
-		$params  = (array) json_decode( stripslashes( sanitize_text_field( $_POST['params'] ) ) );
-		$plugin  = $params['plugin'];
-		$form_id = $params['formId'];
+		$raw     = isset( $_POST['params'] ) ? wp_unslash( $_POST['params'] ) : '{}';
+		$params  = (array) json_decode( $raw );
+		$plugin  = sanitize_key( $params['plugin'] ?? '' );
+		$form_id = sanitize_text_field( $params['formId'] ?? '' );
 
 		$columns = Utils::get_table_columns( $plugin, $form_id );
-		return wp_send_json( $columns );
+		wp_send_json( $columns );
 	}
 
 
@@ -95,17 +97,20 @@ class Module {
 	 * @return array|mixed
 	 */
 	public function delete_submissions() {
-		
-		if (! Permissions::check_permission( Permissions::$CAP_DELETE ) ) {
-			die( 'Sorry, you are not allowed to do this action!' );
-		}
-		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
-			die( 'Sorry, your nonce did not verify!' );
+
+		$nonce = isset( $_POST['ajaxNonce'] ) ? sanitize_text_field( wp_unslash( $_POST['ajaxNonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'fv_ajax_nonce' ) ) {
+			wp_die( 'Sorry, your nonce did not verify!' );
 		}
 
-		$params = (array) json_decode( stripslashes( sanitize_text_field( $_POST['params'] ) ) );
-		Base::delete_entries( $params['ids'] );
-		// Base::delete_entries( ["9) AND (1=1);-- -"] );
+		if ( ! Permissions::check_permission( Permissions::$CAP_DELETE ) ) {
+			wp_die( 'Sorry, you are not allowed to do this action!' );
+		}
+
+		$raw    = isset( $_POST['params'] ) ? wp_unslash( $_POST['params'] ) : '{}';
+		$params = (array) json_decode( $raw );
+		$ids    = array_map( 'absint', (array) ( $params['ids'] ?? [] ) );
+		Base::delete_entries( $ids );
 	}
 
 	/**
@@ -119,40 +124,39 @@ class Module {
 	 */
 	public function get_submissions( $params ) {
 
-		if ( ! Permissions::check_permission( Permissions::$CAP_SUBMISSIONS ) ) {
-			wp_send_json(
-				[
-					'is_error' => true,
-					'message'  => 'Sorry, you are not allowed to do this action!',
-				]
-			);
-			die( 'Sorry, you are not allowed to do this action!' );
-		}
-		
-		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
-			wp_send_json(
+		$nonce = isset( $_POST['ajaxNonce'] ) ? sanitize_text_field( wp_unslash( $_POST['ajaxNonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'fv_ajax_nonce' ) ) {
+			return wp_send_json(
 				[
 					'is_error' => true,
 					'message'  => 'Sorry, your nonce did not verify!',
 				]
 			);
-			die( 'Sorry, your nonce did not verify!' );
+		}
+
+		if ( ! Permissions::check_permission( Permissions::$CAP_SUBMISSIONS ) ) {
+			return wp_send_json(
+				[
+					'is_error' => true,
+					'message'  => 'Sorry, you are not allowed to do this action!',
+				]
+			);
 		}
 
 		
 
-		$params = (array) json_decode( stripslashes( sanitize_text_field( $_POST['params'] ) ) );
+		$raw    = isset( $_POST['params'] ) ? wp_unslash( $_POST['params'] ) : '{}';
+		$params = (array) json_decode( $raw );
 
 		$fv_query          = new FV_Query( $params );
 		$result            = $fv_query->get_result();
 		$result['columns'] = [];
 
-		if ( count( array_keys( $result['data'] ) ) > 0 || true ) {
-			$columns_obj                = new FV_Columns( $params );
-			$cols                       = $columns_obj->get_columns();
-			$result['columns']          = $cols['columns'];
-			$result['original_columns'] = $cols['original_columns'];
-		}
+		$columns_obj                = new FV_Columns( $params );
+		$cols                       = $columns_obj->get_columns();
+		$result['columns']          = $cols['columns'];
+		$result['original_columns'] = $cols['original_columns'];
+
 		wp_send_json( $result );
 	}
 

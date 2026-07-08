@@ -1,6 +1,6 @@
 <?php
-// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\DbManager;
 use FormVibes\Classes\Settings;
@@ -62,7 +62,7 @@ class Elementor extends Base {
 		$this->plugin_name = 'elementor';
 
 		add_action( 'elementor_pro/forms/process', [ $this, 'form_new_record' ], 10, 2 );
-		add_action( 'wp_ajax_elementor_data_import', [ $this, 'elementor_data_import' ] );
+		add_action( 'wp_ajax_fv_elementor_data_import', [ $this, 'elementor_data_import' ] );
 
 		add_filter( 'fv_forms', [ $this, 'register_form' ] );
 		add_filter( 'elementor_pro/forms/wp_mail_message', [ $this, 'add_content_to_mail' ] );
@@ -70,8 +70,12 @@ class Elementor extends Base {
 
 	// TODO:: will implement it later -> SRK
 	public function elementor_data_import() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return wp_send_json_error( [ 'message' => 'Insufficient permissions.' ], 403 );
+		}
+
 		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
-			die( 'Sorry, your nonce did not verify!' );
+			wp_die( 'Sorry, your nonce did not verify!' );
 		}
 
 		global $wpdb;
@@ -229,8 +233,6 @@ class Elementor extends Base {
 		$posted_data['fv_form_id'] = $id;
 		$data['posted_data']       = $posted_data;
 
-		$this->field_processor( $record );
-		
 		self::$submission_id = $this->insert_entries( $data );
 	}
 
@@ -329,7 +331,7 @@ class Elementor extends Base {
 		global $wpdb;
 
 		$form_query = "select distinct form_id,form_plugin from {$wpdb->prefix}fv_enteries e WHERE form_plugin='elementor'";
-		$form_res   = $wpdb->get_results( $wpdb->prepare( $form_query ), OBJECT_K );
+		$form_res   = $wpdb->get_results( $wpdb->prepare( $form_query ), OBJECT_K ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
 		$inserted_forms = get_option( 'fv_forms' );
 
@@ -386,11 +388,12 @@ class Elementor extends Base {
 	public static function check_global( $post_id ) {
 		global $wpdb;
 		// check global key exist in meta key
-		$sql_query1 = "SELECT *  FROM {$wpdb->prefix}postmeta
-		WHERE meta_key LIKE '_elementor_global_widget_included_posts'
-		AND post_id={$post_id}";
-
-		$results1 = $wpdb->get_results( $wpdb->prepare( $sql_query1 ) );
+		$results1 = $wpdb->get_results( // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}postmeta WHERE meta_key LIKE '_elementor_global_widget_included_posts' AND post_id = %d",
+				$post_id
+			)
+		);
 
 		if ( ! count( $results1 ) ) {
 			// not global widget

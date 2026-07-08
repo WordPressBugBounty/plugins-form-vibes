@@ -1,14 +1,15 @@
 <?php
 
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\Utils;
 use FormVibes\Integrations\Base;
 
 /**
- * WS Form plugin class
+ * Everest Forms plugin class
  *
- * Register the WS Form plugin
+ * Register the Everest Forms plugin
  */
 
 class Everest extends Base {
@@ -197,7 +198,7 @@ class Everest extends Base {
         } elseif ( $values['type'] === 'radio' ) {
             $posted_data[ $values['meta_key'] ] = isset( $values['value_raw'] ) ? $values['value_raw'] : '';
         }elseif($values['type'] === 'dropdown' || $values['type'] === 'checkbox') {
-            $posted_data[ $values['meta_key'] ] = isset( $values['value_raw'] ) ? (is_array( $values['value_raw'] ) ? implode( ', ', $values['value_raw'] ) : $values['value_raw']) : '';
+            $posted_data[ $values['meta_key'] ] = isset( $values['value_raw'] ) ? (is_array( $values['value_raw'] ) ? implode( ', ', array_map( 'sanitize_text_field', $values['value_raw'] ) ) : sanitize_text_field( $values['value_raw'] )) : '';
 
         }elseif($values['type'] === 'country'){
             $all_contries = evf_get_countries();
@@ -233,7 +234,7 @@ class Everest extends Base {
             $posted_data[ $values['meta_key'] ] = $address_value;
         }
         else {
-            $posted_data[ $values['meta_key'] ] = is_array( $values['value'] ) ? implode( ', ', $values['value'] ) : $values['value'];
+            $posted_data[ $values['meta_key'] ] = is_array( $values['value'] ) ? implode( ', ', array_map( 'sanitize_text_field', $values['value'] ) ) : $values['value'];
         }
     }
     return $posted_data;

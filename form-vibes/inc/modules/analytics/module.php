@@ -64,15 +64,16 @@ class Module {
 	 */
 	public function get_analytics_data() {
 		if (!Permissions::check_permission( Permissions::$CAP_ANALYTICS ) ) {
-			die( 'Sorry, you are not allowed to do this action!' );
+			wp_die( 'Sorry, you are not allowed to do this action!' );
 		}
 
 		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
-			die( 'Sorry, your nonce did not verify!' );
+			wp_die( 'Sorry, your nonce did not verify!' );
 		}
 
 		
-		$params = (array) json_decode( stripslashes( sanitize_text_field( $_POST['params'] ) ) );
+		$raw    = isset( $_POST['params'] ) ? wp_unslash( $_POST['params'] ) : '{}';
+		$params = (array) json_decode( $raw );
 		
 		$params = Utils::make_params( $params );
 		$plugin = $params['plugin'];
@@ -101,15 +102,16 @@ class Module {
 	 */
 	private function get_data( $params ) {
 
-		$filter_type = $params['filter_type'];
-		$plugin_name = $params['plugin'];
-		$from_date   = $params['fromDate'];
-		$to_date     = $params['toDate'];
-		$filter      = '';
-		$formid      = $params['formid'];
-		$label       = '';
-		$query_param = '';
-		$query_type  = $params['query_type'];
+		$allowed_filter_types = [ 'day', 'month', 'week' ];
+		$filter_type          = in_array( $params['filter_type'], $allowed_filter_types, true ) ? $params['filter_type'] : 'day';
+		$plugin_name          = $params['plugin'];
+		$from_date            = $params['fromDate'];
+		$to_date              = $params['toDate'];
+		$filter               = '';
+		$formid               = $params['formid'];
+		$label                = '';
+		$query_param          = '';
+		$query_type           = $params['query_type'];
 
 		if ( 'day' === $filter_type ) {
 			$default_data = $this->get_dates_from_range( $from_date, $to_date );
@@ -145,16 +147,16 @@ class Module {
 		global $wpdb;
 		$param_where = [];
 
-		$param_where[] = "form_plugin='" . $plugin_name . "'";
-		$param_where[] = "form_id='" . $formid . "'";
+		$param_where[] = $wpdb->prepare( 'form_plugin = %s', $plugin_name );
+		$param_where[] = $wpdb->prepare( 'form_id = %s', $formid );
 
 		if ( Utils::key_exists( 'is_all_forms', $params ) && $params['is_all_forms'] ) {
 			$param_where = [];
 		}
 
 		if ( $query_type !== 'All_Time' ) {
-			$param_where[] = "DATE_FORMAT(`captured`,GET_FORMAT(DATE,'JIS')) >= '" . $from_date . "'";
-			$param_where[] = "DATE_FORMAT(`captured`,GET_FORMAT(DATE,'JIS')) <= '" . $to_date . "'";
+			$param_where[] = $wpdb->prepare( "DATE_FORMAT(`captured`,GET_FORMAT(DATE,'JIS')) >= %s", $from_date );
+			$param_where[] = $wpdb->prepare( "DATE_FORMAT(`captured`,GET_FORMAT(DATE,'JIS')) <= %s", $to_date );
 		}
 
 		if ( count( $param_where ) > 0 ) {
@@ -217,24 +219,25 @@ class Module {
 		}
 		// echo $params['query_type'];
 		if ( ('Last_7_Days' === $params['query_type'] || 'Last_Week' === $params['query_type']) || 'This_Week' === $params['query_type'] ) {
-			$pre_from_date = date( 'Y-m-d', strtotime( $params['fromDate'] . '-7 days' ) );
-			$pre_to_date   = date( 'Y-m-d', strtotime( $params['fromDate'] . '-1 days' ) );
+			$pre_from_date = wp_date( 'Y-m-d', strtotime( $params['fromDate'] . '-7 days' ) );
+			$pre_to_date   = wp_date( 'Y-m-d', strtotime( $params['fromDate'] . '-1 days' ) );
 		} elseif ( 'Last_30_Days' === $params['query_type'] ) {
-			$pre_from_date = date( 'Y-m-d', strtotime( $params['fromDate'] . '-30 days' ) );
-			$pre_to_date   = date( 'Y-m-d', strtotime( $params['fromDate'] . '-1 days' ) );
+			$pre_from_date = wp_date( 'Y-m-d', strtotime( $params['fromDate'] . '-30 days' ) );
+			$pre_to_date   = wp_date( 'Y-m-d', strtotime( $params['fromDate'] . '-1 days' ) );
 		} else {
 			// $pre_from_date = date( 'Y-m-01', strtotime( 'first day of last month' ) );
-			$pre_from_date = date('Y-m-01', strtotime('first day of -1 month', strtotime($params['fromDate'])));
+			$pre_from_date = wp_date('Y-m-01', strtotime('first day of -1 month', strtotime($params['fromDate'])));
 			// $pre_to_date   = date( 'Y-m-t', strtotime( 'last day of last month' ) );
-			$pre_to_date = date('Y-m-t', strtotime('last day of -1 month', strtotime($params['fromDate'])));
+			$pre_to_date = wp_date('Y-m-t', strtotime('last day of -1 month', strtotime($params['fromDate'])));
 		}
 		
 		global $wpdb;
-		$pre_param  = " where form_id='" . $params['formid'] . "' and DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) >= '" . $pre_from_date . "'";
-		$pre_param .= " and DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) <= '" . $pre_to_date . "'";
-		$qry        = "SELECT COUNT(*) FROM {$wpdb->prefix}fv_enteries " . $pre_param;
-		// echo $qry;
-		// die('dfaf');
+		$qry            = $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}fv_enteries WHERE form_id = %s AND DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) >= %s AND DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) <= %s",
+			$params['formid'],
+			$pre_from_date,
+			$pre_to_date
+		);
 		$pre_data_count = $wpdb->get_var( $qry );
 		foreach ( $all_forms as $form_key => $form_value ) {
 			if ( 'Caldera' === $form_value['plugin'] || 'caldera' === $form_value['plugin'] ) {
@@ -250,9 +253,12 @@ class Module {
 					'formName' => $form_value['formName'],
 				];
 			} else {
-				$param  = " where form_id='" . $form_key . "' and DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) >= '" . $params['fromDate'] . "'";
-				$param .= " and DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) <= '" . $params['toDate'] . "'";
-				$qry    = "SELECT COUNT(*) FROM {$wpdb->prefix}fv_enteries " . $param;
+				$qry = $wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->prefix}fv_enteries WHERE form_id = %s AND DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) >= %s AND DATE_FORMAT(captured,GET_FORMAT(DATE,'JIS')) <= %s",
+					$form_key,
+					$params['fromDate'],
+					$params['toDate']
+				);
 
 				$data_count = $wpdb->get_var( $qry );
 
@@ -390,12 +396,12 @@ class Module {
 		// phpcs:ignore WordPress.PHP.StrictComparisons.LooseComparison
 		if ( 0 == $start_week ) {
 			if ( 'Sunday' === $date_time->format( 'l' ) ) {
-				$sunday = date( 'Y-m-d', strtotime( $date ) );
+				$sunday = wp_date( 'Y-m-d', strtotime( $date ) );
 			} else {
-				$sunday = date( 'Y-m-d', strtotime( 'last sunday', strtotime( $date ) ) );
+				$sunday = wp_date( 'Y-m-d', strtotime( 'last sunday', strtotime( $date ) ) );
 			}
 
-			$saturday = 'Saturday' === $date_time->format( 'l' ) ? date( 'Y-m-d', strtotime( $date ) ) : date( 'Y-m-d', strtotime( 'next saturday', strtotime( $date ) ) );
+			$saturday = 'Saturday' === $date_time->format( 'l' ) ? wp_date( 'Y-m-d', strtotime( $date ) ) : wp_date( 'Y-m-d', strtotime( 'next saturday', strtotime( $date ) ) );
 
 			return [
 				'sunday'   => $sunday,
@@ -403,12 +409,12 @@ class Module {
 			];
 		} else {
 			if ( 'Monday' === $date_time->format( 'l' ) ) {
-				$monday = date( 'Y-m-d', strtotime( $date ) );
+				$monday = wp_date( 'Y-m-d', strtotime( $date ) );
 			} else {
-				$monday = date( 'Y-m-d', strtotime( 'last monday', strtotime( $date ) ) );
+				$monday = wp_date( 'Y-m-d', strtotime( 'last monday', strtotime( $date ) ) );
 			}
 
-			$sunday = 'Sunday' === $date_time->format( 'l' ) ? date( 'Y-m-d', strtotime( $date ) ) : date( 'Y-m-d', strtotime( 'next sunday', strtotime( $date ) ) );
+			$sunday = 'Sunday' === $date_time->format( 'l' ) ? wp_date( 'Y-m-d', strtotime( $date ) ) : wp_date( 'Y-m-d', strtotime( 'next sunday', strtotime( $date ) ) );
 
 			return [
 				'monday' => $monday,
@@ -446,13 +452,13 @@ class Module {
 			$current_date += ( 86400 )
 		) {
 
-			$store = date( 'Y-m-d', $current_date );
+			$store = wp_date( 'Y-m-d', $current_date );
 
 			$array[ $store ] = (object) [
 				'Label'    => $store,
-				'week'     => ( date( 'z', $current_date ) + 1 ) . '(' . date( 'y', $current_date ) . ')',
+				'week'     => ( wp_date( 'z', $current_date ) + 1 ) . '(' . wp_date( 'y', $current_date ) . ')',
 				'count'    => 0,
-				'ordering' => date( 'y', $current_date ) . '-' . ( date( 'z', $current_date ) + 1 ),
+				'ordering' => wp_date( 'y', $current_date ) . '-' . ( wp_date( 'z', $current_date ) + 1 ),
 			];
 		}
 		$array[] = new \stdClass();

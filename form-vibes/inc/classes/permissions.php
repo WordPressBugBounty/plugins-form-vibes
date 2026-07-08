@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Classes;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * A utility class for managing the plugin permissions
@@ -83,30 +84,21 @@ class Permissions {
 	/**
 	 * Check if the user has the permission
 	 * @param  string $permission The permission to check
-	 * @param  int $user_id The user ID to check
 	 * @access public
 	 * @since 1.4.4
 	 * @return bool
 	 */
-	public static function check_permission($permission, $user_id = null) {
-		$user = wp_get_current_user();
-		
-		// NOt USE Furter
-		// if (!$user_id) {
-		// 	$user_id = $user->ID;
-		// }
-	
-		// Use current_user_can() to check for capabilities instead of user_can()
-		if (current_user_can('manage_options')) { // Check a suitable capability for admin users
+	public static function check_permission( $permission ) {
+		if ( current_user_can( 'manage_options' ) ) {
 			return true;
 		}
 	
-		if (Utils::is_pro()) {
-			if (current_user_can($permission)) {
+		if ( Utils::is_pro() ) {
+			if ( current_user_can( $permission ) ) {
 				return true;
 			}
 		}
-		
+
 		return false;
 	}
 

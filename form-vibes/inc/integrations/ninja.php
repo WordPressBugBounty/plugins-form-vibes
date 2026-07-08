@@ -1,6 +1,6 @@
 <?php
-// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\Utils;
 use FormVibes\Integrations\Base;
@@ -155,7 +155,7 @@ class NinjaForms extends Base {
 
 			if ( $type === 'listcheckbox' || $type === 'listimage' || $type === 'listmultiselect' || $type === 'file_upload' ) {
 				if ( $value ) {
-					$posted_data[ $value_key ] = implode( ', ', $value );
+					$posted_data[ $value_key ] = implode( ', ', array_map( 'sanitize_text_field', $value ) );
 				}
 			}
 		}

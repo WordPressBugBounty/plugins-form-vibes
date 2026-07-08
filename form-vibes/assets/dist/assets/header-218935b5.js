@@ -1,0 +1,2 @@
+import{o as i,c as r,q as s,f as e,t as o}from"./input-db4deaa9.js";const c={class:"fv-admin-bar"},l=["innerHTML"],_={class:"fv-plugin-name"},d={class:"fv-version"},h={__name:"header",setup(v){const{title:n="Form Vibes",version:a="",logo:t=""}=window.fvGlobalVar;return(f,m)=>(i(),r("div",c,[s("div",{class:"fv-logo",innerHTML:e(t)},null,8,l),s("h2",_,o(e(n)),1),s("div",d,o(e(a)),1)]))}};export{h as _};
+//# sourceMappingURL=header-218935b5.js.map

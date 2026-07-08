@@ -62,14 +62,15 @@ class Module {
 	 */
 	public function get_event_logs_data() {
 		if (! Permissions::check_permission( Permissions::$CAP_LOGS ) ) {
-			die( 'Sorry, you are not allowed to do this action!' );
-		}
-		
-		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
-			die( 'Sorry, your nonce did not verify!' );
+			wp_die( 'Sorry, you are not allowed to do this action!' );
 		}
 
-		$params = (array) json_decode( stripslashes( sanitize_text_field( $_POST['params'] ) ) );
+		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
+			wp_die( 'Sorry, your nonce did not verify!' );
+		}
+
+		$raw    = isset( $_POST['params'] ) ? wp_unslash( $_POST['params'] ) : '{}';
+		$params = (array) json_decode( $raw );
 
 		$gmt_offset = get_option( 'gmt_offset' );
 		$hours      = (int) $gmt_offset;
@@ -79,17 +80,24 @@ class Module {
 		} else {
 			$time_zone = $hours . ':' . $minutes;
 		}
-		$limit = '';
-		if ( $params['page'] > 1 ) {
-			$limit = ' limit ' . $params['pageSize'] * ( $params['page'] - 1 ) . ',' . $params['pageSize'];
-		} else {
-			$limit = ' limit ' . $params['pageSize'];
-		}
 		global $wpdb;
 
-		$entry_query = "select @a:=@a+1 serial_number, l.id,l.user_id,u.user_login,event,description,DATE_FORMAT(ADDTIME(export_time_gmt,'" . $time_zone . "' ), '%Y/%m/%d %H:%i:%S') as export_time_gmt from {$wpdb->prefix}fv_logs l LEFT JOIN {$wpdb->prefix}users u on l.user_id=u.ID, (SELECT @a:= 0) AS a ORDER BY id desc" . $limit;
+		$page      = absint( $params['page'] );
+		$page_size = absint( $params['pageSize'] );
 
-		$entry_result      = $wpdb->get_results( $entry_query, ARRAY_A );
+		if ( $page > 1 ) {
+			$limit = $wpdb->prepare( ' LIMIT %d, %d', $page_size * ( $page - 1 ), $page_size );
+		} else {
+			$limit = $wpdb->prepare( ' LIMIT %d', $page_size );
+		}
+
+		$entry_query  = $wpdb->prepare(
+			"SELECT @a:=@a+1 serial_number, l.id, l.user_id, u.user_login, event, description, DATE_FORMAT(ADDTIME(export_time_gmt, %s), '%%Y/%%m/%%d %%H:%%i:%%S') as export_time_gmt FROM {$wpdb->prefix}fv_logs l LEFT JOIN {$wpdb->prefix}users u ON l.user_id = u.ID, (SELECT @a:= 0) AS a ORDER BY id DESC",
+			$time_zone
+		);
+		$entry_query .= $limit;
+
+		$entry_result = $wpdb->get_results( $entry_query, ARRAY_A );
 		$entry_count_query = "select count(id) from {$wpdb->prefix}fv_logs l ORDER BY id desc";
 
 		$entry_count_result = $wpdb->get_var( $entry_count_query );

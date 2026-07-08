@@ -1,6 +1,6 @@
 <?php
-// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\DbManager;
 use FormVibes\Classes\ApiEndpoint;
@@ -144,8 +144,12 @@ class Cf7 extends Base {
 				break;
 			}
 
-			$filetype = strrpos( $file[0], '.' );
-			$filetype = substr( $file[0], $filetype );
+			$check = wp_check_filetype_and_ext( $file[0], basename( $file[0] ) );
+			if ( ! $check['ext'] || ! $check['type'] ) {
+				continue;
+			}
+
+			$filetype = '.' . $check['ext'];
 			$filename = wp_rand( 1111111111, 9999999999 );
 			$time_now = time();
 
@@ -164,7 +168,7 @@ class Cf7 extends Base {
 				unset( $posted_data[ $key ] );
 			} elseif ( gettype( $value ) === 'array' ) {
 
-				$posted_data[ $key ] = implode( ', ', $value );
+				$posted_data[ $key ] = implode( ', ', array_map( 'sanitize_text_field', $value ) );
 			}
 		}
 
@@ -204,7 +208,7 @@ class Cf7 extends Base {
 		$post_type = $param;
 
 		$form_query = "select distinct form_id,form_plugin from {$wpdb->prefix}fv_enteries e WHERE form_plugin='cf7'";
-		$form_res   = $wpdb->get_results( $wpdb->prepare( $form_query ), OBJECT_K );
+		$form_res   = $wpdb->get_results( $wpdb->prepare( $form_query ), OBJECT_K ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
 		$inserted_forms = get_option( 'fv_forms' );
 

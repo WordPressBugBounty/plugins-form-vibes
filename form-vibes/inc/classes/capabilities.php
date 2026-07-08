@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Classes;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * A class to manage the capabilities of the plugin.
@@ -99,12 +100,10 @@ class Capabilities {
 	 * @return bool
 	 */
 	public static function check( $cap ) {
-		if ( is_user_logged_in() ) {
-			$user = wp_get_current_user();
-			if ( ! $user->has_cap( $cap ) ) {
-				return false;
-			}
+		if ( ! is_user_logged_in() ) {
+			return false;
 		}
-		return true;
+		$user = wp_get_current_user();
+		return $user->has_cap( $cap );
 	}
 }

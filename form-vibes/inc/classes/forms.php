@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Classes;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * A utility class for managing the forms

@@ -137,7 +137,7 @@ class Module {
 	public function fv_review_box() {
 		if ( isset( $_GET['remind_later'] ) || isset( $_GET['review_done'] ) ) {
 			if ( isset( $_GET['fv_nonce'] ) && ! wp_verify_nonce( $_GET['fv_nonce'], 'wp_rest' ) ) {
-				die( 'Sorry, your nonce did not verify!' );
+				wp_die( 'Sorry, your nonce did not verify!' );
 			}
 
 			if ( isset( $_GET['remind_later'] ) ) {
@@ -256,16 +256,12 @@ class Module {
 	 * @return void
 	 */
 	public function fv_pro_purchase() {
-		if ( ! function_exists( 'is_plugin_active' ) ) {
-			include_once ABSPATH . 'wp-admin/includes/plugin.php';
-		}
-		$is_pro_activated = is_plugin_active( 'form-vibes-pro/form-vibes-pro.php' );
-		if ( $is_pro_activated ) {
+		if ( Utils::is_pro() ) {
 			return;
 		}
 
 		if ( isset( $_GET['fv_nonce'] ) && ! wp_verify_nonce( $_GET['fv_nonce'], 'wp_rest' ) ) {
-			die( 'Sorry, your nonce did not verify!' );
+			wp_die( 'Sorry, your nonce did not verify!' );
 		}
 
 		if ( isset( $_GET['fv_pro_later'] ) ) {

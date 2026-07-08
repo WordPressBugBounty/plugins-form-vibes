@@ -1,6 +1,7 @@
 <?php
 // phpcs:disable WordPress.DateTime.RestrictedFunctions.date_date
 namespace FormVibes\Classes;
+defined( 'ABSPATH' ) || exit;
 
 use Carbon\Carbon;
 use Stripe\Util\Util;
@@ -122,6 +123,18 @@ class Utils {
 			'authenticate'                    => esc_html__( 'Authenticate', 'wpv-fv' ),
 			'instructions'                    => esc_html__( 'Instructions', 'wpv-fv' ),
 			'filter'                    => esc_html__( 'Filter', 'wpv-fv' ),
+			'reset'                     => esc_html__( 'Reset', 'wpv-fv' ),
+			'close'                     => esc_html__( 'Close', 'wpv-fv' ),
+			'connected'                 => esc_html__( 'Connected', 'wpv-fv' ),
+			'not_connected'             => esc_html__( 'Not Connected', 'wpv-fv' ),
+			'client_secret_saved'       => esc_html__( 'Saved — leave blank to keep existing', 'wpv-fv' ),
+			'enter_client_secret'       => esc_html__( 'Enter a client secret', 'wpv-fv' ),
+			'delete_entry'              => esc_html__( 'Delete Entry', 'wpv-fv' ),
+			'sn'                        => esc_html__( 'S/N', 'wpv-fv' ),
+			'user'                      => esc_html__( 'User', 'wpv-fv' ),
+			'event'                     => esc_html__( 'Event', 'wpv-fv' ),
+			'description'               => esc_html__( 'Description', 'wpv-fv' ),
+			'time'                      => esc_html__( 'Time', 'wpv-fv' ),
 		];
 
 		return apply_filters( 'wpv-fv_builder_i18n', $i18n );
@@ -1183,13 +1196,18 @@ class Utils {
 	 * @return bool
 	 */
 	public static function is_pro() {
+		static $is_checking = false;
+		if ( $is_checking ) {
+			return false;
+		}
+		$is_checking     = true;
 		$global_settings = Utils::get_global_settings();
 		$is_pro          = false;
 		// phpcs:ignore WordPress.PHP.StrictComparisons.LooseComparison
 		if ( file_exists( WPV_FV__PATH . 'inc/pro/bootstrap.php' ) && wpv_fv()->can_use_premium_code__premium_only() && Utils::key_exists( 'is_pro', $global_settings ) && $global_settings['is_pro'] == 1 ) {
 			$is_pro = true;
 		}
-
+		$is_checking = false;
 		return $is_pro;
 	}
 

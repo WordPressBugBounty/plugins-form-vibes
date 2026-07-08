@@ -1,7 +1,7 @@
 <?php
 // phpcs:disable WordPress.Security.NonceVerification.Recommended
-// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\DbManager;
 use FormVibes\Classes\Settings;
@@ -119,19 +119,20 @@ class BeaverBuilder extends Base {
 		$data['plugin_name'] = $this->plugin_name;
 
 		if ( Utils::key_exists( 'template_node_id', $_REQUEST ) ) {
-			$id = $_REQUEST['template_node_id'];
+			$id = sanitize_text_field( wp_unslash( $_REQUEST['template_node_id'] ) );
 		} else {
-			$id = $_REQUEST['node_id'];
+			$id = sanitize_text_field( wp_unslash( $_REQUEST['node_id'] ) );
 		}
+		$post_id              = absint( $_REQUEST['post_id'] );
 		$data['id']           = $id;
 		$data['captured']     = current_time( 'mysql', 0 );
 		$data['captured_gmt'] = current_time( 'mysql', 1 );
 
-		$form = $this->get_form_title( $_REQUEST['post_id'] );
+		$form = $this->get_form( $post_id );
 
 		$data['title'] = $form[ $id ]['name'];
 
-		$data['url']              = get_permalink( $_REQUEST['post_id'] );
+		$data['url']              = get_permalink( $post_id );
 		$posted_data              = [];
 		$posted_data['fv_plugin'] = $this->plugin_name;
 		$posted_data              = $this->field_processor( $settings );
@@ -158,23 +159,19 @@ class BeaverBuilder extends Base {
 	public function field_processor( $settings ) {
 		$save_data = [];
 		if ( 'show' === $settings->name_toggle ) {
-
-			$save_data['name'] = $_REQUEST['name'];
+			$save_data['name'] = sanitize_text_field( wp_unslash( $_REQUEST['name'] ) );
 		}
 		if ( 'show' === $settings->subject_toggle ) {
-
-			$save_data['subject'] = $_REQUEST['subject'];
+			$save_data['subject'] = sanitize_text_field( wp_unslash( $_REQUEST['subject'] ) );
 		}
 		if ( 'show' === $settings->email_toggle ) {
-
-			$save_data['email'] = $_REQUEST['email'];
+			$save_data['email'] = sanitize_email( wp_unslash( $_REQUEST['email'] ) );
 		}
 		if ( 'show' === $settings->phone_toggle ) {
-
-			$save_data['phone'] = $_REQUEST['phone'];
+			$save_data['phone'] = sanitize_text_field( wp_unslash( $_REQUEST['phone'] ) );
 		}
 
-		$save_data['message'] = $_REQUEST['message'];
+		$save_data['message'] = sanitize_textarea_field( wp_unslash( $_REQUEST['message'] ) );
 
 		return $save_data;
 	}
@@ -190,12 +187,12 @@ class BeaverBuilder extends Base {
 	public function get_form( $post_id ) {
 		global $wpdb;
 
-		$sql_query = "SELECT *  FROM {$wpdb->prefix}postmeta
-		WHERE meta_key LIKE '_fl_builder_data'
-		AND meta_value LIKE '%contact-form%'
-		AND post_id=" . $post_id;
-
-		$results = $wpdb->get_results( $wpdb->prepare( $sql_query ) );
+		$results = $wpdb->get_results( // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->prepare(
+				"SELECT * FROM {$wpdb->prefix}postmeta WHERE meta_key LIKE '_fl_builder_data' AND meta_value LIKE '%contact-form%' AND post_id = %d",
+				$post_id
+			)
+		);
 
 		if ( ! count( $results ) ) {
 			return;

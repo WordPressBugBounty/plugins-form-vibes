@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Classes;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\DbManager;
 use FormVibes\Classes\Utils;
@@ -44,9 +45,9 @@ class Settings {
 	public function __construct() {
 		add_filter( 'formvibes/global/settings', [ $this, 'set_default_settings' ] );
 		add_filter( 'formvibes/global/settings', [ $this, 'set_settings' ] );
-		add_action( 'wp_ajax_save_settings', [ $this, 'save_settings' ] );
-		add_action( 'wp_ajax_reset_settings', [ $this, 'reset_settings' ] );
-		add_action( 'wp_ajax_save_columns_settings', [ $this, 'save_columns_settings' ] );
+		add_action( 'wp_ajax_fv_save_settings', [ $this, 'save_settings' ] );
+		add_action( 'wp_ajax_fv_reset_settings', [ $this, 'reset_settings' ] );
+		add_action( 'wp_ajax_fv_save_columns_settings', [ $this, 'save_columns_settings' ] );
 		add_action('init', function(){
 			$this->set_initial_settings();
 		});
@@ -71,18 +72,18 @@ class Settings {
 	public function save_columns_settings() {
 
 		if ( ! Permissions::check_permission( Permissions::$CAP_SUBMISSIONS ) ) {
-			die( 'Sorry, you are not allowed to do this action!' );
+			wp_die( 'Sorry, you are not allowed to do this action!' );
 		}
 		
 		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
-			die( 'Sorry, your nonce did not verify!' );
+			wp_die( 'Sorry, your nonce did not verify!' );
 		}
 
-		$params = (array) json_decode( stripslashes( sanitize_text_field( $_POST['params'] ) ) );
+		$params = (array) json_decode( wp_unslash( $_POST['params'] ) );
 
 		$columns = $params['columns'];
-		$plugin  = $params['plugin'];
-		$form_id = $params['formid'];
+		$plugin  = sanitize_text_field( $params['plugin'] );
+		$form_id = sanitize_text_field( $params['formid'] );
 
 		$data                             = get_option( 'fv-keys' );
 		$data[ $plugin . '_' . $form_id ] = $columns;
@@ -166,21 +167,14 @@ class Settings {
 	// Check Done
 	public function reset_settings() {
 		if(!current_user_can('manage_options')){
-			die('Sorry, you are not allowed to do this action!');
+			wp_die( 'Sorry, you are not allowed to do this action!' );
 		}
 		
 		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
-			die( 'Sorry, your nonce did not verify!' );
+			wp_die( 'Sorry, your nonce did not verify!' );
 		}
 
 		$is_saved = update_option( 'fvSettings', $this->get_default_settings_value(), false );
-
-		wp_send_json(
-			[
-				'is_error' => false,
-				'message'  => 'Settings reset successfully.',
-			]
-		);
 
 		if ( $is_saved ) {
 			wp_send_json(
@@ -252,16 +246,17 @@ class Settings {
 	public function save_settings() {
 		
 		if(! current_user_can('manage_options')){
-			die('Sorry, you are not allowed to do this action!');
+			wp_die( 'Sorry, you are not allowed to do this action!' );
 		}
 
 		if ( ! wp_verify_nonce( $_POST['ajaxNonce'], 'fv_ajax_nonce' ) ) {
-			die( 'Sorry, your nonce did not verify!' );
+			wp_die( 'Sorry, your nonce did not verify!' );
 		}
 		
 		// echo '<pre>';  print_r($_POST['params']); echo '</pre>';
 		// die('dfaf');
 		$settings = (array) json_decode( stripslashes( sanitize_text_field( $_POST['params'] ) ) );
+		$settings = array_intersect_key( $settings, $this->get_default_settings() );
 
 		try {
 			// save settings to db.

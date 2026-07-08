@@ -1,6 +1,6 @@
 <?php
-// phpcs:disable WordPress.DateTime.RestrictedFunctions.date_date
 namespace FormVibes\Classes;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Pro\Classes\Helper;
 use FormVibes\Classes\Utils;
@@ -35,22 +35,25 @@ class Export {
 	 * @return void
 	 */
 	public function fv_export_csv() {
-		if (isset($_POST['btnExport'])) {
-			// Check if the current user has the capability to export
-			if ( !Permissions::check_permission(Permissions::$CAP_EXPORT) ) {
-				die('Sorry, you are not allowed to do this action!!!!!!');
-			}
-			
-			// Verify the nonce
-			if (!wp_verify_nonce($_POST['fv_nonce'], 'fv_ajax_nonce')) {
-				die('Sorry, your nonce did not verify!');
+		if ( isset( $_POST['btnExport'] ) ) {
+			$nonce = isset( $_POST['fv_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['fv_nonce'] ) ) : '';
+			if ( ! wp_verify_nonce( $nonce, 'fv_ajax_nonce' ) ) {
+				wp_die( esc_html__( 'Sorry, your nonce did not verify.', 'wpv-fv' ) );
 			}
 
-			$params = (array) json_decode(stripslashes($_REQUEST['fv_export_data']));
-			// echo '<pre>';  print_r($params); echo '</pre>';
-			// die('dfadf');
-			// new Export($params);
-			$this->export_file($params);
+			if ( ! Permissions::check_permission( Permissions::$CAP_EXPORT ) ) {
+				wp_die( esc_html__( 'Sorry, you are not allowed to do this action.', 'wpv-fv' ) );
+			}
+
+			$raw    = isset( $_REQUEST['fv_export_data'] ) ? wp_unslash( $_REQUEST['fv_export_data'] ) : '{}';
+			$params = (array) json_decode( $raw );
+
+			$params['plugin']        = sanitize_key( $params['plugin'] ?? '' );
+			$params['form_id']       = sanitize_text_field( $params['form_id'] ?? '' );
+			$params['description']   = sanitize_text_field( $params['description'] ?? '' );
+			$params['download_type'] = in_array( $params['download_type'] ?? '', [ 'csv' ], true ) ? $params['download_type'] : 'csv';
+
+			$this->export_file( $params );
 		}
 	}
 
@@ -63,24 +66,18 @@ class Export {
 	 * @return void
 	 */
 	private function export_file( $params ) {
-		if (!Permissions::check_permission(Permissions::$CAP_EXPORT)) {
-			die('Sorry, you are not allowed to do this action!!!!!!');
-		}
-
 		$fv_settings = get_option( 'fvSettings' );
 
-		// echo '<pre>';  print_r($params); echo '</pre>';
-		// die('dfadf');
 		if ( $fv_settings && Utils::key_exists( 'csv_export_reason', $fv_settings ) && $fv_settings['csv_export_reason'] ) {
 			Utils::set_export_reason( $params['description'] );
 		}
 
 		$plugin                  = lcfirst( $params['plugin'] );
 		$form_id                 = $params['form_id'];
-		$name                    = $plugin . '-' . $form_id . '-' . date( 'Y/m/d' );
-		$name                    = apply_filters( 'formvibes/quickexport/filename', $name, $params );
-		$download_type           = $params['download_type'];
-		//$fv_export_selected_rows = $params['fv_export_selected_rows'];
+		$name                    = $plugin . '-' . $form_id . '-' . date( 'Y/m/d' ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
+		$name          = apply_filters( 'formvibes/quickexport/filename', $name, $params );
+		$name          = str_replace( [ "\r", "\n", '"' ], '', $name );
+		$download_type = $params['download_type'];
 
 		$params['data_return_type'] = [
 			'with-column-keys',
@@ -141,7 +138,7 @@ class Export {
 		header( 'Cache-Control: must-revalidate, post-check=0, pre-check=0' );
 		header( 'Cache-Control: private', false );
 		header( 'Content-Type: text/csv;charset=utf-8' );
-		header( 'Content-Disposition: attachment;filename=' . $name . '.csv' );
+		header( 'Content-Disposition: attachment;filename="' . $name . '.csv"' );
 
 		$fp = fopen( 'php://output', 'w' );
 
@@ -169,7 +166,7 @@ class Export {
 				foreach ( $cols as $col ) {
 					if ( $col['visible'] ) {
 						if ( Utils::key_exists( $col['colKey'], $values ) ) {
-							$temp[ $col['colKey'] ] = stripslashes( $values[ $col['colKey'] ] );
+							$temp[ $col['colKey'] ] = self::sanitize_csv_value( stripslashes( $values[ $col['colKey'] ] ) );
 						} else {
 							$temp[ $col['colKey'] ] = '';
 						}
@@ -197,7 +194,13 @@ class Export {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fclose
 		fclose( $fp );
 
-		$exported_data = ob_get_contents();
 		die();
+	}
+
+	private static function sanitize_csv_value( $value ) {
+		if ( preg_match( '/^[=+\-@\t\r]/', $value ) ) {
+			return "'" . $value;
+		}
+		return $value;
 	}
 }

@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Classes;
+defined( 'ABSPATH' ) || exit;
 
 use Carbon\Carbon;
 

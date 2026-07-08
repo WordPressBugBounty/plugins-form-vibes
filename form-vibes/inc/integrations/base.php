@@ -1,7 +1,6 @@
 <?php
-// phpcs:disable WordPress.DateTime.RestrictedFunctions.date_date
-// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\Utils;
 
@@ -21,18 +20,15 @@ abstract class Base {
 	 */
 	public function get_user_ip() {
 		if ( ! empty( $_SERVER['HTTP_CLIENT_IP'] ) ) {
-			// check ip from share internet
-			$ip = $_SERVER['HTTP_CLIENT_IP'];
+			$ip = filter_var( $_SERVER['HTTP_CLIENT_IP'], FILTER_VALIDATE_IP );
 		} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-			// to check ip is pass from proxy
 			$temp_ip = explode( ',', $_SERVER['HTTP_X_FORWARDED_FOR'] );
-
-			$ip = $temp_ip[0];
+			$ip      = filter_var( trim( $temp_ip[0] ), FILTER_VALIDATE_IP );
 		} else {
-			$ip = $_SERVER['REMOTE_ADDR'];
+			$ip = filter_var( $_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP );
 		}
 
-		return $ip;
+		return $ip ? $ip : '0.0.0.0';
 	}
 
 	/**
@@ -103,8 +99,9 @@ abstract class Base {
 		}
 
 		if ( $save_ua ) {
-			$entry_data['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
-			$entries['user_agent']    = $_SERVER['HTTP_USER_AGENT'];
+			$user_agent               = sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) );
+			$entry_data['user_agent'] = $user_agent;
+			$entries['user_agent']    = $user_agent;
 		} else {
 			$entry_data['user_agent'] = '';
 		}
@@ -116,6 +113,7 @@ abstract class Base {
 		$insert_id = $wpdb->insert_id;
 
 		if ( $insert_id !== 0 ) {
+			\WPVibes\FormVibes\Vendor\WPVibes\ReviewReminder\ReviewReminder::increment( 'form-vibes', 'submissions_logged' );
 			$this->insert_entry_meta( $insert_id, $entries['posted_data'], $entries['plugin_name'], $entries['id'], $entry_data );
 			return $insert_id;
 		}
@@ -137,8 +135,9 @@ abstract class Base {
 	public function insert_entry_meta( $insert_id, $entires, $plugin_name, $form_id, $entry_data ) {
 		global $wpdb;
 
+		$meta_insert_failed = false;
 		foreach ( $entires as $key => $value ) {
-			$wpdb->insert(
+			$result = $wpdb->insert(
 				$wpdb->prefix . 'fv_entry_meta',
 				[
 					'data_id'    => $insert_id,
@@ -146,10 +145,12 @@ abstract class Base {
 					'meta_value' => $value,
 				]
 			);
+			if ( false === $result ) {
+				$meta_insert_failed = true;
+			}
 		}
-		$insert_id_meta = $wpdb->insert_id;
 
-		if ( $insert_id_meta < 1 ) {
+		if ( $meta_insert_failed ) {
 			do_action(
 				'fv_after_entry_meta_failed',
 				[
@@ -198,11 +199,11 @@ abstract class Base {
 		// PHPCS:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 		$delete_row_query2 = $wpdb->prepare( "Delete from {$wpdb->prefix}fv_entry_meta where data_id IN ( $idsPlaceholder )", $ids );
 
-		$dl1 = $wpdb->query( $delete_row_query1 );
+		$dl1 = $wpdb->query( $delete_row_query1 ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
-		$dl2 = $wpdb->query( $delete_row_query2 );
+		$dl2 = $wpdb->query( $delete_row_query2 ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
-		if ( 0 === $dl1 || 0 === $dl2 ) {
+		if ( false === $dl1 || false === $dl2 ) {
 			$message['status']  = 'failed';
 			$message['message'] = 'Could not able to delete Entries';
 		} else {

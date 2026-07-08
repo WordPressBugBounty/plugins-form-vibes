@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\Utils;
 use FormVibes\Integrations\Base;
@@ -109,7 +110,7 @@ class WpForms extends Base {
 		// check if user wants to store/save the entry to db.
 		$save_entry = true;
 
-		$save_entry = apply_filters( 'formvibes/ninjaforms/save_record', $save_entry, $fields );
+		$save_entry = apply_filters( 'formvibes/wpforms/save_record', $save_entry, $fields );
 
 		if ( ! $save_entry ) {
 			return;

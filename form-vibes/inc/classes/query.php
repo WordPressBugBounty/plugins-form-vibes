@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Classes;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * A utility class for managing the plugin queries
@@ -207,11 +208,12 @@ class FV_Query {
 			];
 		}
 
-		$fields = implode( ',', $fields );
-		$q    =  "SELECT {$fields} FROM {$this->entry_meta_table_name} where {$this->join_key} IN (" . implode( ',', $data_ids ) . ')' ;
+		$fields   = implode( ',', $fields );
+		$safe_ids = implode( ',', array_map( 'absint', $data_ids ) );
+		$q        = "SELECT {$fields} FROM {$this->entry_meta_table_name} WHERE {$this->join_key} IN ({$safe_ids})";
 		// phpcs:ignore WordPress.PHP.StrictComparisons.LooseComparison
 		if ( $this->plugin != 'caldera' ) {
-			$q .= $wpdb->prepare( " AND meta_key NOT IN ('%s', '%s') ", 'fv_form_id', 'fv_plugin' );
+			$q .= $wpdb->prepare( " AND meta_key NOT IN (%s, %s) ", 'fv_form_id', 'fv_plugin' );
 		}
 
 		return $q;
@@ -259,7 +261,7 @@ class FV_Query {
 			}
 		}
 	
-		// Use the validated order_by value
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- entry_table_alias and submission_date_key are hardcoded class properties, not user input.
 		$entry_query_arr = $wpdb->prepare(" ORDER BY {$this->entry_table_alias}.{$this->submission_date_key} %1s", $order_by);
 		// echo $entry_query_arr;
 		// die('dfadf');
@@ -314,22 +316,29 @@ class FV_Query {
 		global $wpdb;
 
 		$entry_query_arr = $query_arr['entry_query'];
-		$relation = sanitize_text_field($entry_query_arr['relation']);
+		$allowed_relations = [ 'AND', 'OR' ];
+		$relation          = strtoupper( sanitize_text_field( $entry_query_arr['relation'] ) );
+		$relation          = in_array( $relation, $allowed_relations, true ) ? $relation : 'AND';
 		unset($entry_query_arr['relation']);
 
+		$allowed_columns = Utils::get_entry_table_fields();
+		$allowed_compare = [ '=', '!=', 'LIKE', 'NOT LIKE' ];
 		$vars = [];
 		foreach ($entry_query_arr as $values) {
-			$column = sanitize_text_field($values['column']);
-			$compare = sanitize_text_field($values['compare']);
-			$value = trim($values['value']);
-			
-			// Prepare each condition and add to the $vars array
-			if (in_array($compare, ['=', '!=', 'LIKE', 'NOT LIKE'])) {
-				$vars[] = $wpdb->prepare(" {$this->entry_table_alias}.{$column} {$compare} %s", $value);
+			$column  = sanitize_key( $values['column'] );
+			$compare = sanitize_text_field( $values['compare'] );
+			$value   = trim( $values['value'] );
+
+			if ( ! in_array( $column, $allowed_columns, true ) ) {
+				continue;
+			}
+
+			if ( in_array( $compare, $allowed_compare, true ) ) {
+				$vars[] = $wpdb->prepare( " {$this->entry_table_alias}.{$column} {$compare} %s", $value );
 			}
 		}
 
-		return implode(" {$relation} ", $vars);
+		return implode( " {$relation} ", $vars );
 	}
 
 	/**
@@ -342,9 +351,11 @@ class FV_Query {
 	 */
 	public function prepare_meta_query( $query_arr){
 		global $wpdb;
-		$entry_fields = Utils::get_entry_table_fields();
-		$meta_query_arr = (array) $query_arr['meta_query'];
-		$relation       = sanitize_text_field($meta_query_arr['relation']);
+		$entry_fields      = Utils::get_entry_table_fields();
+		$meta_query_arr    = (array) $query_arr['meta_query'];
+		$allowed_relations = [ 'AND', 'OR' ];
+		$relation          = strtoupper( sanitize_text_field( $meta_query_arr['relation'] ) );
+		$relation          = in_array( $relation, $allowed_relations, true ) ? $relation : 'AND';
 		unset( $meta_query_arr['relation'] );
 		$vars = [];
 		if ( count( $meta_query_arr ) <= 0 ) {
@@ -357,13 +368,18 @@ class FV_Query {
 			$meta_key_key   = 'slug';
 			$meta_value_key = 'value';
 		}
+		$allowed_compare = [ '=', '!=', 'LIKE', 'NOT LIKE' ];
 		foreach ( $meta_query_arr as $key => $values ) {
 			$values      = (array) $values;
 			$table_alias = 'e';
-			$meta_key    = sanitize_text_field($values['meta_key']);
+			$meta_key    = sanitize_text_field( $values['meta_key'] );
 			$meta_value  = trim( $values['meta_value'] );
-			$compare     = sanitize_text_field($values['compare']);
-			//echo '<pre>';  print_r($values); echo '</pre>';
+			$compare     = sanitize_text_field( $values['compare'] );
+
+			if ( ! in_array( $compare, $allowed_compare, true ) ) {
+				continue;
+			}
+
 			if ( 'OR' == $relation ) {
 				$key = 0;
 			}
@@ -373,12 +389,12 @@ class FV_Query {
 
 			$k = $key + 1;
 
-			if ($compare === 'LIKE' || $compare === 'NOT LIKE') {
-				$meta_value = '%' . $wpdb->esc_like($meta_value) . '%';
+			if ( $compare === 'LIKE' || $compare === 'NOT LIKE' ) {
+				$meta_value = '%' . $wpdb->esc_like( $meta_value ) . '%';
 			}
 
-			if ($table_alias === 'e') {
-				if (empty($meta_value)) {
+			if ( $table_alias === 'e' ) {
+				if ( empty( $meta_value ) ) {
 					$vars[] = $wpdb->prepare(
 						" ( e{$k}.{$meta_key_key} = %s AND e{$k}.{$meta_value_key} LIKE '%%' OR e{$k}.{$meta_key_key} = '' )",
 						$meta_key
@@ -386,11 +402,13 @@ class FV_Query {
 				} else {
 					$vars[] = $wpdb->prepare(
 						" ( e{$k}.{$meta_key_key} = %s AND e{$k}.{$meta_value_key} {$compare} %s )",
-						$meta_key, $meta_value
+						$meta_key,
+						$meta_value
 					);
 				}
 			} else {
-				if (empty($meta_value)) {
+				// $meta_key is safe — validated against $entry_fields (server-side whitelist) above.
+				if ( empty( $meta_value ) ) {
 					$vars[] = " ( entry.{$meta_key} IS NULL OR entry.{$meta_key} = '' )";
 				} else {
 					$vars[] = $wpdb->prepare(

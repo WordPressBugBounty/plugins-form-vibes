@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Integrations;
+defined( 'ABSPATH' ) || exit;
 
 use FormVibes\Classes\Utils;
 use FormVibes\Integrations\Base;
@@ -122,10 +123,11 @@ class Bricks extends Base {
 		\Bricks\Ajax::verify_nonce('bricks-nonce-form');
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$form_settings = \Bricks\Helpers::get_element_settings( $_POST['postId'], $_POST['formId'] );
-
+		$post_id = absint( $_POST['postId'] );
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$form_id = $this->is_form_global( $_POST['postId'], $_POST['formId'] );
+		$form_element_id = sanitize_text_field( wp_unslash( $_POST['formId'] ) );
+		$form_settings   = \Bricks\Helpers::get_element_settings( $post_id, $form_element_id );
+		$form_id         = $this->is_form_global( $post_id, $form_element_id );
 
 		$file_data = $this->handle_files( $form_settings );
 
@@ -144,7 +146,7 @@ class Bricks extends Base {
 
 		$data['title'] = isset( $form_settings['fvFormName'] ) ? $form_settings['fvFormName'] : 'Bricks Form';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$data['url']              = $_POST['referrer'];
+		$data['url']              = esc_url_raw( wp_unslash( $_POST['referrer'] ) );
 		$posted_data              = array_merge( $form_fields, $file_data );
 		$posted_data['fv_plugin'] = $this->plugin_name;
 		$posted_data              = $this->prepare_form_data( $posted_data );
@@ -200,7 +202,7 @@ class Bricks extends Base {
 				continue;
 			}
 			$key                 = substr( $key, 11 );
-			$posted_data[ $key ] = is_array( $value ) ? implode( ', ', $value ) : $value;
+			$posted_data[ $key ] = is_array( $value ) ? implode( ', ', array_map( 'sanitize_text_field', $value ) ) : $value;
 		}
 
 		return $posted_data;
@@ -291,18 +293,26 @@ class Bricks extends Base {
 		}
 		foreach ( $_FILES as $fieldKey => $files ) {
 			$key = substr( $fieldKey, 11 );
+			if ( ! isset( $fileUpload[ $key ] ) ) {
+				continue;
+			}
 			if ( empty( $files['name'] ) ) {
 				continue;
 			}
 			if ( $fileUpload[ $key ]['fileUploadLimit'] !== '' && count( $files['name'] ) > $fileUpload[ $key ]['fileUploadLimit'] ) {
 				self::$errors[] = 'File upload limit exceed';
-				return; // have to uncomment
+				return;
 			}
 			foreach ( $files['name'] as $inputKey => $value ) {
-				$fileType = strtolower( explode( '/', $files['type'][ $inputKey ] )[1] );
 				$fileName = $files['name'][ $inputKey ];
 				$tmpName  = $files['tmp_name'][ $inputKey ];
 				$fileSize = $files['size'][ $inputKey ];
+				$check    = wp_check_filetype_and_ext( $tmpName, $fileName );
+				if ( ! $check['ext'] || ! $check['type'] ) {
+					self::$errors[] = 'File type not allowed';
+					return;
+				}
+				$fileType = $check['ext'];
 
 				$allowedTypes = $fileUpload[ $key ]['fileUploadAllowedTypes'];
 
@@ -315,13 +325,13 @@ class Bricks extends Base {
 						// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
 						if ( ! in_array( 'jpg', $allowedTypes ) && ! in_array( 'jpeg', $allowedTypes ) ) {
 							self::$errors[] = 'File Type not allowed';
-							return; // have to uncomment
+							return;
 						}
 					} else {
 						// phpcs:ignore WordPress.PHP.StrictInArray.MissingTrueStrict
 						if ( ! in_array( $fileType, $allowedTypes ) ) {
 							self::$errors[] = 'File Type not allowed';
-							return; // have to uncomment
+							return;
 						}
 					}
 				}
@@ -331,10 +341,14 @@ class Bricks extends Base {
 					return;
 				}
 
-				$filename                            = wp_rand( 1111111111, 9999999999 );
-				$time_now                            = time();
+				$filename = wp_rand( 1111111111, 9999999999 );
+				$time_now = time();
+				$dest     = $uploads_dir . '/' . $time_now . '-' . $filename . '.' . $fileType;
+				if ( ! move_uploaded_file( $tmpName, $dest ) ) {
+					self::$errors[] = 'File could not be saved.';
+					return;
+				}
 				$file_data[ 'form-field-' . $key ][] = $fv_dirname . '/' . $time_now . '-' . $filename . '.' . $fileType;
-				copy( $tmpName, $uploads_dir . '/' . $time_now . '-' . $filename . '.' . $fileType );
 			}
 		}
 

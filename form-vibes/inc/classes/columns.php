@@ -1,6 +1,7 @@
 <?php
 
 namespace FormVibes\Classes;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * A utility class for Managing the table columns.
@@ -57,10 +58,16 @@ class FV_Columns {
 		}
 
 		global $wpdb;
-		$distinct_cols_query = "select distinct BINARY(meta_key) from {$wpdb->prefix}fv_entry_meta em join {$wpdb->prefix}fv_enteries e on em.data_id=e.id where form_id='" . $params['form_id'] . "' AND meta_key != 'fv_form_id' AND meta_key != 'fv_plugin'";
+		$distinct_cols_query = $wpdb->prepare(
+			"SELECT DISTINCT BINARY(meta_key) FROM {$wpdb->prefix}fv_entry_meta em JOIN {$wpdb->prefix}fv_enteries e ON em.data_id = e.id WHERE e.form_id = %s AND meta_key != 'fv_form_id' AND meta_key != 'fv_plugin'",
+			$params['form_id']
+		);
 		// phpcs:ignore WordPress.PHP.StrictComparisons.LooseComparison
 		if ( $params['plugin'] == 'caldera' ) {
-			$distinct_cols_query = "select distinct BINARY(slug) from {$wpdb->prefix}cf_form_entry_values em join {$wpdb->prefix}cf_form_entries e on em.entry_id=e.id AND e.form_id ='" . $params['form_id'] . "'";
+			$distinct_cols_query = $wpdb->prepare(
+				"SELECT DISTINCT BINARY(slug) FROM {$wpdb->prefix}cf_form_entry_values em JOIN {$wpdb->prefix}cf_form_entries e ON em.entry_id = e.id AND e.form_id = %s",
+				$params['form_id']
+			);
 		}
 		$columns = $wpdb->get_col( $distinct_cols_query );
 		// phpcs:ignore WordPress.PHP.StrictComparisons.LooseComparison
